@@ -19,7 +19,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Generate Release Keystore and Sign APK
+      - name: Build and Sign Release APK with apksigner
         run: |
           KEYSTORE_PATH="$RUNNER_TEMP/release-keystore.jks"
           STORE_PASS="royal3card2026"
@@ -37,14 +37,20 @@ jobs:
             -dname "CN=Playzone Studio, OU=Games, O=Playzone Studio, L=Aligarh, ST=UP, C=IN"
 
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon \
-            -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
-            -Pandroid.injected.signing.store.password="$STORE_PASS" \
-            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$KEY_PASS"
+          ./gradlew assembleRelease --no-daemon
+
+          APK_UNSIGNED=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name "apksigner" | sort -V | tail -n 1)
 
           mkdir -p signed_output
-          cp app/build/outputs/apk/release/*.apk signed_output/
+          "$APKSIGNER" sign \
+            --ks "$KEYSTORE_PATH" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass "pass:$STORE_PASS" \
+            --key-pass "pass:$KEY_PASS" \
+            --out "signed_output/app-release.apk" \
+            "$APK_UNSIGNED"
+
           cp "$KEYSTORE_PATH" signed_output/release-keystore.jks
 
       - name: Upload Signed APK and Keystore Artifact
