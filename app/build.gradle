@@ -10,8 +10,8 @@ android {
         applicationId "com.playzonestudios.royal3cardcasino3d"
         minSdk 24
         targetSdk 34
-        versionCode 20900
-        versionName "2.9"
+        versionCode 21000
+        versionName "2.10"
     }
 
     buildTypes {
