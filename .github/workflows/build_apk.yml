@@ -36,28 +36,12 @@ jobs:
             -keypass "$KEY_PASS" \
             -dname "CN=Playzone Studio, OU=Games, O=Playzone Studio, L=Aligarh, ST=UP, C=IN"
 
-          cat <<EOF >> app/build.gradle
-
-          android {
-              signingConfigs {
-                  release {
-                      storeFile file("$KEYSTORE_PATH")
-                      storePassword "$STORE_PASS"
-                      keyAlias "$KEY_ALIAS"
-                      keyPassword "$KEY_PASS"
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                      minifyEnabled false
-                      shrinkResources false
-                  }
-              }
-          }
-          EOF
-
-          gradle assembleRelease --no-daemon
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
+            -Pandroid.injected.signing.store.password="$STORE_PASS" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASS"
 
           mkdir -p signed_output
           cp app/build/outputs/apk/release/*.apk signed_output/
