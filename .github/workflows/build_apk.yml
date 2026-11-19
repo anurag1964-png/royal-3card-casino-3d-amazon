@@ -1,4 +1,4 @@
-name: Build Royal 3-Card Casino 3D Amazon Release APK
+name: Build Signed Royal 3-Card Casino 3D Release APK
 
 on:
   push:
@@ -19,16 +19,52 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.5'
+      - name: Generate Release Keystore and Sign APK
+        run: |
+          KEYSTORE_PATH="$RUNNER_TEMP/release-keystore.jks"
+          STORE_PASS="royal3card2026"
+          KEY_ALIAS="royal3cardkey"
+          KEY_PASS="royal3card2026"
 
-      - name: Build Release APK
-        run: gradle assembleRelease
+          keytool -genkeypair -v \
+            -keystore "$KEYSTORE_PATH" \
+            -alias "$KEY_ALIAS" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass "$STORE_PASS" \
+            -keypass "$KEY_PASS" \
+            -dname "CN=Playzone Studio, OU=Games, O=Playzone Studio, L=Aligarh, ST=UP, C=IN"
 
-      - name: Upload APK Artifact
+          cat <<EOF >> app/build.gradle
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file("$KEYSTORE_PATH")
+                      storePassword "$STORE_PASS"
+                      keyAlias "$KEY_ALIAS"
+                      keyPassword "$KEY_PASS"
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                      shrinkResources false
+                  }
+              }
+          }
+          EOF
+
+          gradle assembleRelease --no-daemon
+
+          mkdir -p signed_output
+          cp app/build/outputs/apk/release/*.apk signed_output/
+          cp "$KEYSTORE_PATH" signed_output/release-keystore.jks
+
+      - name: Upload Signed APK and Keystore Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Royal3CardCasino3D-Amazon-v20900
-          path: app/build/outputs/apk/release/*.apk
+          name: Royal3CardCasino3D-Signed-v21000
+          path: signed_output/*
